@@ -1,0 +1,52 @@
+name: Deploy Hexo Blog to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main  # 当代码推送到 main 分支时触发
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出当前仓库
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 设置 Node.js 环境
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 安装依赖
+      - name: Install dependencies
+        run: |
+          npm install hexo-cli -g
+          npm install
+
+      # 生成 Hexo 静态文件
+      - name: Build Hexo site
+        run: |
+          hexo clean
+          hexo generate
+
+      # 将生成的静态文件推送到 GitHub Pages 仓库
+      - name: Deploy to GitHub Pages
+        run: |
+          git clone https://github.com/manicsteiner/manicsteiner.github.io.git
+          cd manicsteiner.github.io
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          cd blog
+          rm -rf *
+          cp -r ../../public/* .
+          cd ..
+          git add .
+          date=$(TZ="Asia/Shanghai" date +'%Y%m%d')
+          git commit -m "blog update $date"
+          git remote set-url origin https://$TOKEN@github.com/manicsteiner/manicsteiner.github.io.git
+          git push origin main
+        env:
+          TOKEN: ${{ secrets.BLOG_DEPLOY_TOKEN }}
